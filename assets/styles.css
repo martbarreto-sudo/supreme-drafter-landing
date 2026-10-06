@@ -100,8 +100,10 @@ a:focus-visible, button:focus-visible {
     background: linear-gradient(180deg, rgba(16,185,129,0.04), rgba(9,10,15,0.55));
     backdrop-filter: blur(8px);
 }
-.brand { display: flex; align-items: center; gap: 14px; }
-.brand-name { font-family: var(--serif); font-size: 1.12rem; font-weight: 700; letter-spacing: 1px; line-height: 1.1; }
+/* A marca ocupa o que sobra da nav (até a largura natural, nome sempre inteiro):
+   a nav só quebra linha quando de fato não cabe ao lado dela. */
+.brand { display: flex; align-items: center; gap: 14px; flex: 1 1 0%; max-width: max-content; }
+.brand-name { font-family: var(--serif); font-size: 1.12rem; font-weight: 700; letter-spacing: 1px; line-height: 1.1; white-space: nowrap; }
 .brand-name b { color: var(--mint); font-weight: 700; }
 .brand-sub { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-faint); }
 
@@ -109,7 +111,8 @@ a:focus-visible, button:focus-visible {
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; }
 
 /* Nav */
-.nav { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.72rem; }
+/* wrap: sem ele a nav não encolhe e o overflow-x:hidden do body corta os últimos links */
+.nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; font-family: var(--mono); font-size: 0.72rem; }
 .nav a { color: var(--text-dim); text-decoration: none; padding: 7px 12px; border-radius: 8px; border: 1px solid transparent; transition: .2s var(--ease); }
 .nav a:hover { color: var(--mint); border-color: var(--line); }
 .nav a.active { color: var(--mint); border-color: var(--line-strong); background: rgba(16,185,129,0.06); }
@@ -185,14 +188,18 @@ footer a { color: var(--mint); text-decoration: none; } footer a:hover { color: 
 /* ---------- Responsive ---------- */
 @media (max-width: 920px) {
     .status-strip { grid-template-columns: repeat(2, 1fr); }
-    .topbar-meta .hide-sm { display: none; }
+    .hide-sm { display: none; }
+}
+@media (max-width: 760px) {
+    .topbar { flex-direction: column; align-items: flex-start; }
+    .brand { flex: none; }
+    .brand-name { white-space: normal; }
+    .nav { justify-content: flex-start; }
 }
 @media (max-width: 560px) {
     .shell { padding: 16px 16px 48px; }
-    .topbar { flex-direction: column; align-items: flex-start; }
     .status-strip { grid-template-columns: 1fr; }
     .brand-sub { display: none; }
-    .nav { flex-wrap: wrap; }
 }
 
 /* ---------- Reduced motion ---------- */

@@ -29,10 +29,14 @@
         .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
         .node-circle { cursor: pointer; transition: opacity .2s, stroke-width .2s; }
+        .node-circle:focus { outline: none; }
+        .node-circle:focus-visible { stroke-width: 4; }
+        .node-circle:focus-visible + .node-glow { stroke: var(--mint); stroke-width: 2; opacity: 1; }
         .node-label { font-family: var(--mono); font-size: 10px; fill: var(--text); pointer-events: none; }
         .edge { stroke: var(--line-strong); stroke-width: 1.4; transition: opacity .2s, stroke .2s; }
         .edge-label { font-family: var(--mono); font-size: 8px; fill: var(--text-faint); pointer-events: none; }
         .dim { opacity: 0.16; }
+        .dim:focus-within { opacity: 1; }   /* nó esmaecido em foco pelo teclado continua legível */
 
         /* Side panel */
         .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-elev); padding: 22px; }
@@ -101,7 +105,7 @@
         <!-- XAI LAYOUT -->
         <div class="xai-layout">
             <div class="graph-box reveal d2">
-                <svg id="graph" viewBox="0 0 900 540" role="img" aria-label="Grafo de evidência lógica interativo (demonstração)"></svg>
+                <svg id="graph" viewBox="0 0 900 540" aria-label="Grafo de evidência lógica interativo (demonstração)"></svg>
                 <div class="legend">
                     <span><i style="background:#10B981"></i> Conforme</span>
                     <span><i style="background:#F59E0B"></i> Pendência</span>
@@ -136,6 +140,7 @@
     (function () {
         var SVG = "http://www.w3.org/2000/svg";
         var COLOR = { ok: "#10B981", warn: "#F59E0B", crit: "#EF4444", concl: "#E8ECF2" };
+        var TYPE_NAME = { ok: "Conforme", warn: "Pendência", crit: "Nulidade", concl: "Conclusão" };
 
         // ---- Dados fictícios (demonstração) ----
         var nodes = [
@@ -195,22 +200,28 @@
         nodes.forEach(function (n) {
             var g = el("g", {});
             var c = el("circle", { cx: n.x, cy: n.y, r: n.r, class: "node-circle",
-                fill: "rgba(18,20,28,0.9)", stroke: COLOR[n.type], "stroke-width": 2.4 });
+                fill: "rgba(18,20,28,0.9)", stroke: COLOR[n.type], "stroke-width": 2.4,
+                tabindex: "0", role: "button", "aria-label": n.title + " · " + TYPE_NAME[n.type] });
             c.dataset.id = n.id;
-            var glow = el("circle", { cx: n.x, cy: n.y, r: n.r + 5, fill: "none", stroke: COLOR[n.type], "stroke-width": 1, opacity: 0.18 });
+            var glow = el("circle", { cx: n.x, cy: n.y, r: n.r + 5, class: "node-glow", fill: "none", stroke: COLOR[n.type], "stroke-width": 1, opacity: 0.18 });
             var lab = el("text", { x: n.x, y: n.y + n.r + 14, class: "node-label", "text-anchor": "middle" });
             lab.textContent = n.label;
-            g.appendChild(glow); g.appendChild(c); g.appendChild(lab);
+            // glow logo após o nó: vira o anel de foco do teclado (.node-circle:focus-visible + .node-glow)
+            g.appendChild(c); g.appendChild(glow); g.appendChild(lab);
             svg.appendChild(g);
             nodeEls.push({ g: g, c: c, glow: glow, lab: lab, id: n.id });
 
             c.addEventListener("click", function () { select(n.id); });
+            c.addEventListener("keydown", function (ev) {
+                if (ev.key === "Enter" || ev.key === " " || ev.key === "Spacebar") { ev.preventDefault(); select(n.id); }
+            });
             c.addEventListener("mouseenter", function () { c.setAttribute("stroke-width", 4); });
             c.addEventListener("mouseleave", function () { c.setAttribute("stroke-width", 2.4); });
         });
 
         function clearDim() {
-            edgeEls.forEach(function (e) { e.classList.remove("dim"); e.setAttribute("stroke", "var(--line-strong)"); });
+            // style inline (não o atributo stroke): a regra .edge do CSS vence o atributo de apresentação
+            edgeEls.forEach(function (e) { e.classList.remove("dim"); e.style.stroke = ""; });
             edgeLabelEls.forEach(function (o) { o.el.classList.remove("dim"); });
             nodeEls.forEach(function (o) { o.g.classList.remove("dim"); });
         }
@@ -225,7 +236,7 @@
             edgeEls.forEach(function (e) {
                 var on = (e.dataset.a === id || e.dataset.b === id);
                 if (!on) e.classList.add("dim");
-                else e.setAttribute("stroke", COLOR[n.type]);
+                else e.style.stroke = COLOR[n.type];
             });
             edgeLabelEls.forEach(function (o) {
                 if (o.a !== id && o.b !== id) o.el.classList.add("dim");
@@ -235,7 +246,7 @@
 
         function renderPanel(n) {
             document.getElementById("p-title").textContent = n.title;
-            var typeName = { ok: "Conforme", warn: "Pendência", crit: "Nulidade", concl: "Conclusão" }[n.type];
+            var typeName = TYPE_NAME[n.type];
             var typeEl = document.getElementById("p-type");
             typeEl.textContent = "Tipo · " + typeName;
             typeEl.style.color = COLOR[n.type];
