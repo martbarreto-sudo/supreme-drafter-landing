@@ -29,8 +29,10 @@
         .taggroup > .tdesc { font-size: 0.78rem; color: var(--text-faint); margin: -6px 0 14px; }
 
         .op { border: 1px solid var(--line); border-radius: 11px; background: var(--bg-elev); margin-bottom: 10px; overflow: hidden; }
-        .op-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; user-select: none; }
+        .op-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; user-select: none;
+                   width: 100%; background: none; border: 0; border-radius: 0; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; }
         .op-head:hover { background: rgba(16,185,129,0.03); }
+        .op-head:focus-visible { outline-offset: -2px; border-radius: 10px; }
         .verb { font-family: var(--mono); font-size: 0.64rem; font-weight: 700; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px; color: #04130d; flex-shrink: 0; min-width: 52px; text-align: center; }
         .v-get { background: #10B981; } .v-post { background: #F59E0B; } .v-put { background: #6FD6AC; } .v-delete { background: #EF4444; color: #fff; }
         .op-path { font-family: var(--mono); font-size: 0.84rem; color: var(--text); }
@@ -656,6 +658,8 @@
         // segunda verdade: foi a duplicação silenciosa entre cópias da spec
         // que permitiu lerem contrato-alvo como runtime em produção.
         var specEmbutida = JSON.parse(document.getElementById("openapi-spec").textContent);
+        var HTTP_METHODS = /^(get|put|post|delete|options|head|patch|trace)$/;
+        var opSeq = 0;
 
         function render(spec) {
         document.getElementById("m-version").textContent = "v" + spec.info.version;
@@ -692,11 +696,14 @@
         function opBlock(path, method, op) {
             var div = document.createElement("div"); div.className = "op";
             var verb = method.toUpperCase();
-            var head = document.createElement("div"); head.className = "op-head";
+            var bodyId = "op-body-" + (++opSeq);
+            var head = document.createElement("button"); head.type = "button"; head.className = "op-head";
+            head.setAttribute("aria-expanded", "false");
+            head.setAttribute("aria-controls", bodyId);
             head.innerHTML = '<span class="verb v-' + method + '">' + verb + '</span>' +
                              '<span class="op-path">' + esc(path) + '</span>' +
                              '<span class="op-sum">' + esc(op.summary || "") + '</span>';
-            var body = document.createElement("div"); body.className = "op-body";
+            var body = document.createElement("div"); body.className = "op-body"; body.id = bodyId;
             var html = "";
             if (op.description) html += '<p class="op-desc">' + esc(op.description) + '</p>';
 
@@ -734,7 +741,9 @@
             });
 
             body.innerHTML = html;
-            head.addEventListener("click", function () { div.classList.toggle("open"); });
+            head.addEventListener("click", function () {
+                head.setAttribute("aria-expanded", String(div.classList.toggle("open")));
+            });
             div.appendChild(head); div.appendChild(body);
             return div;
         }
@@ -748,6 +757,9 @@
         Object.keys(spec.paths).forEach(function (path) {
             var methods = spec.paths[path];
             Object.keys(methods).forEach(function (m) {
+                // Path Item também carrega chaves que não são operações
+                // (x-nexum-status, parameters, summary…): só verbos HTTP viram bloco.
+                if (!HTTP_METHODS.test(m)) return;
                 var op = methods[m];
                 var tag = (op.tags && op.tags[0]) || "Outros";
                 (groups[tag] = groups[tag] || []).push({ path: path, method: m, op: op });
@@ -764,10 +776,12 @@
         }
 
         if (window.fetch && location.protocol !== "file:") {
+            // Busca ou contingência, e só então renderiza — uma única vez. Um erro
+            // dentro de render() não pode disparar um segundo render embutido.
             fetch("openapi.json", { cache: "no-cache" })
                 .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-                .then(render)
-                .catch(function () { render(specEmbutida); });
+                .catch(function () { return specEmbutida; })
+                .then(render);
         } else {
             render(specEmbutida);
         }
