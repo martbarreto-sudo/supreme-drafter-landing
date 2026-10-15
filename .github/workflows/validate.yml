@@ -1,0 +1,44 @@
+name: CI — validação HTML/CSS da vitrine
+
+# Este repositório é a vitrine NEXUM no ar (GitHub Pages: branch main, raiz).
+# Até 15/10/2026 ele não tinha nenhum workflow: qualquer push em main ia ao ar
+# sem validação. Este gate roda o mesmo html5validator (Nu/W3C) usado em
+# supreme-drafter/pages.yml, com Actions pinadas por SHA e token somente-leitura.
+# Não publica nada: a publicação continua sendo o "pages-build-deployment" nativo.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate HTML & CSS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install html5validator
+        run: pip install html5validator
+      # Erros de CSS são filtrados: o parser CSS do vnu rejeita CSS moderno válido
+      # (backdrop-filter, var() dentro de linear-gradient / background shorthand).
+      - name: Validate
+        run: html5validator --root . --ignore-re 'CSS:' --log INFO
+      # Guarda de escopo do repositório: só arquivos estáticos do site.
+      - name: Nenhum arquivo fora do escopo (engine, peças, credenciais)
+        run: |
+          set -euo pipefail
+          proibidos=$(git ls-files | grep -Ei '\.(py|pem|key|env|docx|pdf)$|(^|/)\.env|secrets?\.toml|(^|/)(pecas|minutas|nexum_engine|services)/' || true)
+          if [ -n "$proibidos" ]; then
+            echo "Arquivos fora do escopo da vitrine:"; echo "$proibidos"; exit 1
+          fi
+          echo "OK: apenas arquivos estáticos do site."
