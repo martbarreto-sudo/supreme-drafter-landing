@@ -6,7 +6,7 @@
     "description": "ESTADO DE IMPLEMENTAÇÃO: nenhuma rota desta especificação está implementada. Não há servidor HTTP neste repositório. O que existe e roda hoje é a biblioteca Python nexum_engine (arquitetura hexagonal: ports/adapters, verdade/gate, verdade/auditor) mais a vitrine estática em public/. Trate cada path abaixo como ROADMAP — contrato-alvo, não endpoint ativo.\n\nContratos genéricos das rotas soberanas NEXUM v2. Demonstração — nenhum segredo, chave ou dado real. Transporte sob mTLS (TLS 1.3); sessão via cookie JWT HttpOnly.",
     "contact": {
       "name": "Ribeiro & Tigre",
-      "url": "https://www.ribeiroetigre.org/"
+      "url": "https://ribeiroetigre.org/"
     },
     "license": {
       "name": "Proprietário · Nexum"
